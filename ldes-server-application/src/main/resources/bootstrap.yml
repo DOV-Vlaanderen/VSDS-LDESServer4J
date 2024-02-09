@@ -1,0 +1,25 @@
+spring:
+  cloud:
+    config:
+      enabled: true
+      discovery:
+        enabled: true
+      fail-fast: true
+  application:
+    name: dovldesserver
+
+---
+
+# local
+spring:
+  cloud:
+    config:
+      enabled: false
+      discovery:
+        enabled: false
+  config:
+    activate:
+      on-profile: local
+eureka:
+  client:
+    enabled: false

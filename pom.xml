@@ -2,6 +2,11 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+<!--    <parent>
+        <groupId>be.vlaanderen.dov.build</groupId>
+        <artifactId>sigma</artifactId>
+        <version>4.0.0-SNAPSHOT</version>
+    </parent>-->
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Java implementation of a Linked Data Event Stream</description>
@@ -294,6 +299,15 @@
     <build>
         <pluginManagement>
             <plugins>
+                <!--DOV disable checkstyle-->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <configuration>
+                        <skip>true</skip>
+                    </configuration>
+                </plugin>
+
                 <!-- MAVEN -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
