@@ -126,17 +126,6 @@
 
     </properties>
 
-    <distributionManagement>
-        <repository>
-            <id>release</id>
-            <url>${acd.repository.release.url}</url>
-        </repository>
-        <snapshotRepository>
-            <id>snapshot</id>
-            <url>${acd.repository.snapshot.url}</url>
-        </snapshotRepository>
-    </distributionManagement>
-
     <dependencyManagement>
         <dependencies>
             <!-- VSDS -->
@@ -588,16 +577,15 @@
     </profiles>
 
     <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
         <repository>
-            <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+            <id>release</id>
+            <url>${acd.repository.release.url}</url>
         </repository>
+        <snapshotRepository>
+            <id>snapshot</id>
+            <url>${acd.repository.snapshot.url}</url>
+        </snapshotRepository>
     </distributionManagement>
-
 
     <scm>
         <connection>scm:git:${project.scm.url}</connection>
