@@ -1,0 +1,33 @@
+spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            token-uri: ${kc.internal-realm-url}/protocol/openid-connect/token
+            user-info-uri: ${kc.internal-realm-url}/protocol/openid-connect/userinfo
+            jwk-set-uri: ${kc.internal-realm-url}/protocol/openid-connect/certs
+            authorization-uri: ${kc.public-realm-url}/protocol/openid-connect/auth
+            issuer-uri: ${kc.public-realm-url}
+        registration:
+          omgeving:
+            client-id: dov
+            client-name: dov-client
+            provider: keycloak
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid
+      resourceserver:
+        jwt:
+          issuer-uri: ${kc.public-base-url}/realms/Omgeving
+          jwk-set-uri: ${kc.internal-realm-url}/protocol/openid-connect/certs
+kc:
+  realm: Omgeving
+  public-base-url: https://ssov2-ontwikkel.omgeving.vlaanderen.be/auth
+  public-realm-url: ${kc.public-base-url}/realms/${kc.realm}
+  internal-realm-url: ${kc.internal-base-url}/realms/${kc.realm}
+
+cumuli:
+  security:
+    actuator-roles:
+      - DovSbaAdmin
