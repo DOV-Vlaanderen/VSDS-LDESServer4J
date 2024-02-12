@@ -1,0 +1,35 @@
+
+spring:
+  data:
+    mongodb:
+      auto-index-creation: true
+      host: localhost
+      database: sb-minimal
+      port: 27017
+    import: classpath:local-security.yml
+mongock:
+  migration-scan-package: VSDS
+springdoc:
+  swagger-ui:
+    path: /v1/swagger
+ldes-server:
+  host-name: "http://localhost:8080"
+management:
+  tracing:
+    enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: "info,health,caches,env,configprops,logfile,loggers,scheduledtasks,refresh,mappings"
+
+  health:
+    defaults:
+      enabled: false
+    mongo:
+      enabled: true
+    dcat:
+      enabled: true
+  endpoint:
+    health:
+      show-details: always
+

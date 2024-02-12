@@ -30,6 +30,7 @@
         <module>ldes-server-port-fetch-rest</module>
         <module>ldes-server-compaction</module>
         <module>ldes-server-integration-test</module>
+        <module>ldes-server-acd-security</module>
     </modules>
 
     <developers>
@@ -128,6 +129,9 @@
         <acd.repository.release.url>${acd.repository.url}/release</acd.repository.release.url>
         <acd.scm.maven-url>scm:git:git.omgeving.vlaanderen.be/git</acd.scm.maven-url>
 
+        <!--acd security-->
+        <coo-spring-boot-starter.version>3.2.2.1-SNAPSHOT</coo-spring-boot-starter.version>
+        <lombok.version>1.18.30</lombok.version>
     </properties>
 
     <dependencyManagement>
@@ -291,6 +295,19 @@
                 <groupId>org.jetbrains</groupId>
                 <artifactId>annotations</artifactId>
                 <version>${jetbrains-annotations.version}</version>
+            </dependency>
+
+            <!--acd security integration-->
+            <dependency>
+                <groupId>be.cumuli.security</groupId>
+                <artifactId>coo-spring-boot-starter</artifactId>
+                <version>${coo-spring-boot-starter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
