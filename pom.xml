@@ -130,6 +130,7 @@
         <acd.scm.maven-url>scm:git:git.omgeving.vlaanderen.be/git</acd.scm.maven-url>
 
         <!--acd security-->
+        <spring-cloud.version>2022.0.3</spring-cloud.version>
         <coo-spring-boot-starter.version>3.2.2.1-SNAPSHOT</coo-spring-boot-starter.version>
         <lombok.version>1.18.30</lombok.version>
     </properties>
@@ -296,7 +297,14 @@
                 <artifactId>annotations</artifactId>
                 <version>${jetbrains-annotations.version}</version>
             </dependency>
-
+            <!-- spring cloud webflog, sleuth tracing, zipkin-->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <!--acd security integration-->
             <dependency>
                 <groupId>be.cumuli.security</groupId>
