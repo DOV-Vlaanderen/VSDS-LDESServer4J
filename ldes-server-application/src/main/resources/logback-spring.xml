@@ -4,9 +4,6 @@
 
 <configuration debug="true">
 
-    <!-- enable logging configuration over JMX -->
-    <jmxConfigurator/>
-
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <springProperty scope="context" name="APP_NAME" source="spring.application.name"/>

@@ -1,5 +1,7 @@
 
 spring:
+  application:
+    name: dovldesserver
   data:
     mongodb:
       auto-index-creation: true
@@ -32,3 +34,6 @@ management:
     health:
       show-details: always
 
+logging:
+  file:
+    path: /tmp/
