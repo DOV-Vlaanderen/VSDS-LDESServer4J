@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: dovldesserver
+logging:
+  level:
+    root: INFO
+  file:
+    path: /var/log/ldes-server-application/
