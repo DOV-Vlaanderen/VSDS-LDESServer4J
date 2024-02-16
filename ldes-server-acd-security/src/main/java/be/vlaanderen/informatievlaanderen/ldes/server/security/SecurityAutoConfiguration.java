@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -48,8 +49,10 @@ public class SecurityAutoConfiguration {
                 .headers(c -> c.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
                 .authorizeHttpRequests(
                         auth -> {
-                            // landing page
                             // todo rol zetten
+                            // Alle post request
+                            auth.requestMatchers(HttpMethod.POST).authenticated();
+                            // alles op het admin endpoint
                             auth.requestMatchers("/admin/**").authenticated();
                             // any other page
                             auth.anyRequest().permitAll();
