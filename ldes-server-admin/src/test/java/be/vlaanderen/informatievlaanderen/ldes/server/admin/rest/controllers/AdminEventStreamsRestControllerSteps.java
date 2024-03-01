@@ -33,20 +33,20 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class AdminEventStreamsRestControllerSteps extends SpringIntegrationTest {
 	private static final String COLLECTION = "name1";
 	private static final String TIMESTAMP_PATH = "http://purl.org/dc/terms/created";
 	private static final String VERSION_OF_PATH = "http://purl.org/dc/terms/isVersionOf";
-	private static final String MEMBER_TYPE = "https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder";
 	private ResultActions resultActions;
 
 	@Given("a db containing multiple eventstreams")
 	public void aDbContainingMultipleEventstreams() throws URISyntaxException {
 		final String collection2 = "name2";
-		final EventStream eventStream = new EventStream(COLLECTION, TIMESTAMP_PATH, VERSION_OF_PATH, MEMBER_TYPE);
-		final EventStream eventStream2 = new EventStream(collection2, TIMESTAMP_PATH, VERSION_OF_PATH, MEMBER_TYPE);
+		final EventStream eventStream = new EventStream(COLLECTION, TIMESTAMP_PATH, VERSION_OF_PATH);
+		final EventStream eventStream2 = new EventStream(collection2, TIMESTAMP_PATH, VERSION_OF_PATH);
 		eventPublisher.publishEvent(new EventStreamCreatedEvent(eventStream));
 		eventPublisher.publishEvent(new EventStreamCreatedEvent(eventStream2));
 		Model shape1 = readModelFromFile("shape-name1.ttl");
@@ -97,7 +97,7 @@ public class AdminEventStreamsRestControllerSteps extends SpringIntegrationTest 
 
 	@Given("a db containing one event stream")
 	public void aDbContainingOneEventStream() throws URISyntaxException {
-		final EventStream eventStream = new EventStream(COLLECTION, TIMESTAMP_PATH, VERSION_OF_PATH, MEMBER_TYPE);
+		final EventStream eventStream = new EventStream(COLLECTION, TIMESTAMP_PATH, VERSION_OF_PATH);
 		Model shape = readModelFromFile("example-shape.ttl");
 		when(shaclShapeRepository.retrieveShaclShape(COLLECTION))
 				.thenReturn(Optional.of(new ShaclShape(COLLECTION, shape)));
@@ -133,7 +133,7 @@ public class AdminEventStreamsRestControllerSteps extends SpringIntegrationTest 
 	@Given("a db which does not contain specified event stream")
 	public void aDbWhichDoesNotContainSpecifiedEventStream() throws URISyntaxException {
 		assertEquals(Optional.empty(), eventStreamRepository.retrieveEventStream(COLLECTION));
-		final EventStream eventStream = new EventStream(COLLECTION, TIMESTAMP_PATH, VERSION_OF_PATH, MEMBER_TYPE);
+		final EventStream eventStream = new EventStream(COLLECTION, TIMESTAMP_PATH, VERSION_OF_PATH);
 		final Model shacl = readModelFromFile("example-shape.ttl");
 		when(eventStreamRepository.saveEventStream(any(EventStream.class))).thenReturn(eventStream);
 		when(shaclShapeRepository.saveShaclShape(any(ShaclShape.class))).thenReturn(new ShaclShape(COLLECTION, shacl));
@@ -164,9 +164,16 @@ public class AdminEventStreamsRestControllerSteps extends SpringIntegrationTest 
 				.content(readDataFromFile(fileName)));
 	}
 
-	@And("I verify the absent of interactions")
-	public void iVerifyTheAbsentOfInteractions() {
-		verifyNoInteractions(eventStreamRepository);
+	@And("I verify the absence of interactions")
+	public void iVerifyTheAbsenceOfInteractions() {
+		/*
+		 * If the test with this step is ran as very first test, there will always be one interaction with the db,
+		 * due to the initialization of the event streams in the service. Therefor, when no interactions are expected,
+		 * there could be at most one interaction to retrieve all the event streams.
+		 * Otherwise, no interactions are expected
+		 */
+		verify(eventStreamRepository, atMostOnce()).retrieveAllEventStreams();
+		verifyNoMoreInteractions(eventStreamRepository);
 	}
 
 	@When("the client deletes the event stream")
@@ -193,5 +200,13 @@ public class AdminEventStreamsRestControllerSteps extends SpringIntegrationTest 
 		ClassLoader classLoader = getClass().getClassLoader();
 		Path path = Paths.get(Objects.requireNonNull(classLoader.getResource(fileName)).toURI());
 		return Files.lines(path).collect(Collectors.joining());
+	}
+
+	@And("I verify the absence of the event stream")
+	public void iVerifyTheAbsenceOfTheEventStream() throws Exception {
+		mockMvc.perform(get("/admin/api/v1/eventstreams/{collection}", COLLECTION).accept(Lang.NQUADS.getHeaderString()))
+				.andExpect(content().string("Resource of type: eventstream with id: %s could not be found.".formatted(COLLECTION)))
+				.andExpect(status().isNotFound());
+
 	}
 }

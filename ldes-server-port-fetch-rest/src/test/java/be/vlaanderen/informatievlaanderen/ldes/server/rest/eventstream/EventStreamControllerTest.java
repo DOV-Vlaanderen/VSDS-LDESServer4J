@@ -1,16 +1,12 @@
 package be.vlaanderen.informatievlaanderen.ldes.server.rest.eventstream;
 
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.spi.EventStreamResponse;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.spi.EventStreamResponseConverterImpl;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.spi.EventStreamServiceSpi;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.spi.FragmentationConfigExtractor;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.spi.RetentionModelExtractor;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.spi.ViewSpecificationConverter;
+import be.vlaanderen.informatievlaanderen.ldes.server.admin.spi.*;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.constants.RdfConstants;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.HttpModelConverter;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.PrefixAdderImpl;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.RdfModelConverter;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.exceptions.ShaclValidationException;
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.rest.PrefixConstructor;
 import be.vlaanderen.informatievlaanderen.ldes.server.rest.caching.CachingStrategy;
 import be.vlaanderen.informatievlaanderen.ldes.server.rest.caching.EtagCachingStrategy;
 import be.vlaanderen.informatievlaanderen.ldes.server.rest.config.RestConfig;
@@ -64,7 +60,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfiguration(classes = { EventStreamController.class, RestConfig.class,
 		RestResponseEntityExceptionHandler.class, EventStreamResponseConverterImpl.class,
 		ViewSpecificationConverter.class, PrefixAdderImpl.class, EventStreamResponseHttpConverter.class,
-		RetentionModelExtractor.class, HttpModelConverter.class, FragmentationConfigExtractor.class
+		RetentionModelExtractor.class, HttpModelConverter.class, FragmentationConfigExtractor.class,
+		PrefixConstructor.class, RdfModelConverter.class
 })
 class EventStreamControllerTest {
 	private static final String COLLECTION = "mobility-hindrances";
@@ -81,7 +78,7 @@ class EventStreamControllerTest {
 		hostname = "http://localhost:8080";
 		EventStreamResponse eventStream = new EventStreamResponse(COLLECTION,
 				"http://www.w3.org/ns/prov#generatedAtTime",
-				"http://purl.org/dc/terms/isVersionOf", "memberType", List.of(),
+				"http://purl.org/dc/terms/isVersionOf", List.of(),
 				ModelFactory.createDefaultModel());
 
 		Model shacl = createDefaultModel().add(createResource(hostname + "/" + COLLECTION),
@@ -110,7 +107,7 @@ class EventStreamControllerTest {
 		assertNotNull(maxAge);
 		assertEquals(CONFIGURED_MAX_AGE_IMMUTABLE, maxAge);
 
-		Model actualModel = RdfModelConverter.fromString(result.getResponse().getContentAsString(), lang);
+		Model actualModel = RDFParser.fromString(result.getResponse().getContentAsString()).lang(lang).toModel();
 		assertEquals(LDES_EVENT_STREAM_URI, getObjectURI(actualModel, RdfConstants.RDF_SYNTAX_TYPE));
 	}
 
@@ -177,7 +174,7 @@ class EventStreamControllerTest {
 					.andExpect(status().isOk())
 					.andExpect(result -> {
 						String contentAsString = result.getResponse().getContentAsString();
-						Model actualModel = RdfModelConverter.fromString(contentAsString, Lang.TURTLE);
+						Model actualModel = RDFParser.fromString(contentAsString).lang(Lang.TURTLE).toModel();
 						actualModel.isIsomorphicWith(model);
 					});
 

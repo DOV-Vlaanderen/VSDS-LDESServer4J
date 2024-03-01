@@ -5,6 +5,7 @@ import be.vlaanderen.informatievlaanderen.ldes.server.fetching.entities.TreeNode
 import be.vlaanderen.informatievlaanderen.ldes.server.rest.treenode.services.TreeNodeConverter;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFWriter;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
@@ -13,20 +14,19 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.List;
 
-import static be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.RdfModelConverter.getLang;
 import static be.vlaanderen.informatievlaanderen.ldes.server.domain.exceptions.RdfFormatException.RdfFormatContext.FETCH;
+import static be.vlaanderen.informatievlaanderen.ldes.server.rest.treenode.config.TreeViewWebConfig.DEFAULT_RDF_MEDIA_TYPE;
 
 public class TreeNodeHttpConverter implements HttpMessageConverter<TreeNode> {
 
-	private static final MediaType DEFAULT_MEDIA_TYPE = MediaType.valueOf("text/turtle");
-
 	private final TreeNodeConverter treeNodeConverter;
+	private final RdfModelConverter rdfModelConverter;
 
-	public TreeNodeHttpConverter(TreeNodeConverter treeNodeConverter) {
+	public TreeNodeHttpConverter(TreeNodeConverter treeNodeConverter, RdfModelConverter rdfModelConverter) {
 		this.treeNodeConverter = treeNodeConverter;
+		this.rdfModelConverter = rdfModelConverter;
 	}
 
 	@Override
@@ -41,7 +41,7 @@ public class TreeNodeHttpConverter implements HttpMessageConverter<TreeNode> {
 
 	@Override
 	public List<MediaType> getSupportedMediaTypes() {
-		return List.of(DEFAULT_MEDIA_TYPE, MediaType.ALL);
+		return List.of(MediaType.valueOf(DEFAULT_RDF_MEDIA_TYPE), MediaType.ALL);
 	}
 
 	@Override
@@ -53,10 +53,9 @@ public class TreeNodeHttpConverter implements HttpMessageConverter<TreeNode> {
 	@Override
 	public void write(TreeNode treeNode, MediaType contentType, HttpOutputMessage outputMessage)
 			throws IOException, HttpMessageNotWritableException {
-		OutputStream body = outputMessage.getBody();
-		Lang rdfFormat = getLang(contentType, FETCH);
+		Lang rdfFormat = rdfModelConverter.getLang(contentType, FETCH);
 		Model fragmentModel = treeNodeConverter.toModel(treeNode);
-		String outputString = RdfModelConverter.toString(fragmentModel, rdfFormat);
-		body.write(outputString.getBytes());
+		outputMessage.getHeaders().setContentType(contentType);
+		RDFWriter.source(fragmentModel).lang(rdfFormat).output(outputMessage.getBody());
 	}
 }

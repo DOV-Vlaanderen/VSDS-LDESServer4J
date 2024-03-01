@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
@@ -171,8 +170,8 @@ public interface OpenApiTreeNodeController {
 					""")),
 	})
 	@ApiResponse(responseCode = "404", content = @Content, description = "No Linked Data Event Stream found with provided collection name")
-	ResponseEntity<TreeNode> retrieveLdesFragment(HttpServletResponse response,
-			@Parameter(example = "PaginationFragmentation") String view,
+	ResponseEntity<TreeNode> retrieveLdesFragment(
+			@Parameter(example = "by-time") String view,
 			@Parameter(examples = @ExampleObject(value = """
 					{
 						"fragment": "1"

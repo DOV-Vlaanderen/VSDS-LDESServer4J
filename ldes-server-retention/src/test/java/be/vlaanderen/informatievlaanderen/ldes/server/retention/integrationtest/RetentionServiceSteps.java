@@ -8,6 +8,7 @@ import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.EventStream;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.ViewName;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.ViewSpecification;
 import be.vlaanderen.informatievlaanderen.ldes.server.retention.entities.MemberProperties;
+import io.cucumber.java.Before;
 import io.cucumber.java.DataTableType;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
@@ -15,7 +16,6 @@ import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFParserBuilder;
 
 import java.io.IOException;
@@ -36,22 +36,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RetentionServiceSteps extends RetentionIntegrationTest {
 
+	private final RetentionConfigExtractor retentionConfigExtractor = new RetentionConfigExtractor();
 	public static final String MEMBER_TEMPLATE_FILENAME = "features/data/memberTemplate.ttl";
+
+	@Before
+	public void initialization() {
+		memberPropertiesRepository.removeMemberPropertiesOfCollection("mobility-hindrances");
+	}
 
 	@DataTableType
 	public EventStream EventStreamEntryTransformer(Map<String, String> row) {
 		return new EventStream(
 				row.get("collection"),
 				row.get("timestampPath"),
-				row.get("versionOfPath"),
-				row.get("memberType"));
+				row.get("versionOfPath")
+        );
 	}
 
 	@DataTableType
 	public ViewSpecification ViewSpecificationEntryTransformer(Map<String, String> row) throws URISyntaxException {
 		return new ViewSpecification(
 				ViewName.fromString(row.get("viewName")),
-				List.of(readRetentionPolicyFromFile(row.get("rdfDescriptionFileName"))), List.of(), 100);
+				retentionConfigExtractor
+						.readRetentionPolicyFromFile(row.get("rdfDescriptionFileName")), List.of(), 100);
 	}
 
 	@DataTableType
@@ -101,12 +108,6 @@ public class RetentionServiceSteps extends RetentionIntegrationTest {
 		return Files.lines(Paths.get(uri)).collect(Collectors.joining());
 	}
 
-	private Model readRetentionPolicyFromFile(String fileName) throws URISyntaxException {
-		ClassLoader classLoader = getClass().getClassLoader();
-		String uri = Objects.requireNonNull(classLoader.getResource(fileName)).toURI().toString();
-		return RDFDataMgr.loadModel(uri);
-	}
-
 	@And("the following members are allocated to the view {string}")
 	public void theFollowingMembersAreAllocatedToTheView(String viewName, List<String> members) {
 		members.forEach(member -> applicationEventPublisher.publishEvent(new MemberAllocatedEvent(member,
@@ -121,7 +122,7 @@ public class RetentionServiceSteps extends RetentionIntegrationTest {
 		// spring-boot-test is not registered to this thread. Hence, these events do not
 		// pop up in for example ApplicationEvents from spring-boot-test. Therefore, we
 		// use the repository to verify on existence of the members.
-		Stream<String> members = memberPropertiesRepository.getMemberPropertiesWithViewReference(viewName)
+		Stream<String> members = memberPropertiesRepository.getMemberPropertiesWithViewReference(ViewName.fromString(viewName))
 				.map(MemberProperties::getId);
 
 		assertThat(members).containsExactlyInAnyOrder(memberIds.toArray(String[]::new));

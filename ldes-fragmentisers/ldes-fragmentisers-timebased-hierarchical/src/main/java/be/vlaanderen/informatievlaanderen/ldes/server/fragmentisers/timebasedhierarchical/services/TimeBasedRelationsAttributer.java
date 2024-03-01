@@ -2,6 +2,7 @@ package be.vlaanderen.informatievlaanderen.ldes.server.fragmentisers.timebasedhi
 
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.TreeRelation;
 import be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.entities.Fragment;
+import be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.relations.RelationsAttributer;
 import be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.repository.FragmentRepository;
 import be.vlaanderen.informatievlaanderen.ldes.server.fragmentisers.timebasedhierarchical.config.TimeBasedConfig;
 import be.vlaanderen.informatievlaanderen.ldes.server.fragmentisers.timebasedhierarchical.constants.Granularity;
@@ -14,7 +15,7 @@ import java.util.Map;
 
 import static be.vlaanderen.informatievlaanderen.ldes.server.fragmentisers.timebasedhierarchical.constants.TimeBasedConstants.TREE_INBETWEEN_RELATION;
 
-public class TimeBasedRelationsAttributer {
+public class TimeBasedRelationsAttributer implements RelationsAttributer {
 
 	private final FragmentRepository fragmentRepository;
 
@@ -32,9 +33,17 @@ public class TimeBasedRelationsAttributer {
 				childFragment.getFragmentId(),
 				timestamp.asString(), timestamp.getType(),
 				TREE_INBETWEEN_RELATION);
-		if (!parentFragment.containsRelation(parentChildRelation)) {
-			parentFragment.addRelation(parentChildRelation);
-			fragmentRepository.saveFragment(parentFragment);
+		saveRelation(parentFragment, parentChildRelation);
+	}
+
+	public void addDefaultRelation(Fragment parentFragment, Fragment childFragment) {
+		saveRelation(parentFragment, getDefaultRelation(childFragment));
+	}
+
+	private void saveRelation(Fragment fragment, TreeRelation relation) {
+		if (!fragment.containsRelation(relation)) {
+			fragment.addRelation(relation);
+			fragmentRepository.saveFragment(fragment);
 		}
 	}
 

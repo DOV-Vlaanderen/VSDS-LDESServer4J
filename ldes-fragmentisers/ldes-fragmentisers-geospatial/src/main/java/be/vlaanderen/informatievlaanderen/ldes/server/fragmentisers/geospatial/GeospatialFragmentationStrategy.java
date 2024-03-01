@@ -13,6 +13,7 @@ import org.apache.jena.rdf.model.Model;
 import java.util.List;
 import java.util.Set;
 
+import static be.vlaanderen.informatievlaanderen.ldes.server.domain.constants.ServerConstants.DEFAULT_BUCKET_STRING;
 import static be.vlaanderen.informatievlaanderen.ldes.server.fragmentisers.geospatial.constants.GeospatialConstants.FRAGMENT_KEY_TILE_ROOT;
 
 public class GeospatialFragmentationStrategy extends FragmentationStrategyDecorator {
@@ -40,10 +41,19 @@ public class GeospatialFragmentationStrategy extends FragmentationStrategyDecora
 				.parentObservation(parentObservation)
 				.start();
 		getRootTileFragment(parentFragment);
-		Set<String> tiles = geospatialBucketiser.bucketise(memberModel);
+
+		Set<String> tiles = geospatialBucketiser.bucketise(memberId, memberModel);
+
 		List<Fragment> fragments = tiles
 				.stream()
-				.map(tile -> fragmentCreator.getOrCreateTileFragment(parentFragment, tile, rootTileFragment)).toList();
+				.map(tile -> {
+					if (tile.equals(DEFAULT_BUCKET_STRING)) {
+						return fragmentCreator.getOrCreateTileFragment(parentFragment, tile, parentFragment);
+					} else {
+						return fragmentCreator.getOrCreateTileFragment(parentFragment, tile, rootTileFragment);
+					}
+				}).toList();
+
 		fragments
 				.parallelStream()
 				.forEach(ldesFragment -> super.addMemberToFragment(ldesFragment, memberId, memberModel,

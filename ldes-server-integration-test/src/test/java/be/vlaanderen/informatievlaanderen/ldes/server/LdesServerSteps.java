@@ -1,10 +1,13 @@
 package be.vlaanderen.informatievlaanderen.ldes.server;
 
 import io.cucumber.java.After;
+import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Metrics;
 import org.apache.jena.atlas.web.ContentType;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
@@ -26,16 +29,30 @@ import java.util.Stack;
 import java.util.stream.Collectors;
 
 import static be.vlaanderen.informatievlaanderen.ldes.server.domain.constants.RdfConstants.TREE_MEMBER;
+import static be.vlaanderen.informatievlaanderen.ldes.server.domain.constants.RdfConstants.TREE_REMAINING_ITEMS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.jena.rdf.model.ResourceFactory.createProperty;
 import static org.apache.jena.rdf.model.ResourceFactory.createResource;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class LdesServerSteps extends LdesServerIntegrationTest {
+	public static final String ACTUATOR_PROMETHEUS = "/actuator/prometheus";
+	private int lastStatusCode;
 	Stack<String> interactedStreams = new Stack<>();
+
+	@Before("@clearRegistry")
+	public void clearRegistry() {
+		Metrics.globalRegistry.getMeters().forEach(meter -> {
+			if(meter instanceof Counter){
+				Metrics.globalRegistry.remove(meter);
+			}
+		});
+		lastStatusCode = 0;
+	}
 
 	private String getCurrentTimestamp() {
 		return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.[SSS]'Z'"));
@@ -59,15 +76,15 @@ public class LdesServerSteps extends LdesServerIntegrationTest {
 			mockMvc.perform(post("/" + collectionName)
 					.contentType("text/turtle")
 					.content(RDFWriter.source(member).lang(Lang.TURTLE).asString()))
-					.andExpect(status().isOk());
+					.andExpect(status().is2xxSuccessful());
 		}
 	}
 
-	@When("I ingest {int} members of type {string} to the collection {string}")
-	public void iIngestMembersToTheCollection(int numberOfMembers, String memberType, String collectionName)
+	@When("I ingest {int} members of template {string} to the collection {string}")
+	public void iIngestMembersToTheCollection(int numberOfMembers, String memberTemplate, String collectionName)
 			throws Exception {
 		for (int i = 0; i < numberOfMembers; i++) {
-			Model member = RDFParser.fromString(readMemberTemplate(memberType)
+			Model member = RDFParser.fromString(readMemberTemplate(memberTemplate)
 					.replace("ID", String.valueOf(i))
 					.replace("DATETIME", getCurrentTimestamp()))
 					.lang(Lang.TURTLE)
@@ -75,7 +92,7 @@ public class LdesServerSteps extends LdesServerIntegrationTest {
 			mockMvc.perform(post("/" + collectionName)
 					.contentType("text/turtle")
 					.content(RDFWriter.source(member).lang(Lang.TURTLE).asString()))
-					.andExpect(status().isOk());
+					.andExpect(status().is2xxSuccessful());
 		}
 	}
 
@@ -122,7 +139,13 @@ public class LdesServerSteps extends LdesServerIntegrationTest {
 		mockMvc.perform(post("/" + collectionName)
 				.contentType(contentType.getContentTypeStr())
 				.content(member))
-				.andExpect(status().isOk());
+				.andExpect(status().is2xxSuccessful())
+				.andDo(result -> lastStatusCode = result.getResponse().getStatus());
+	}
+
+	@Then("The returned status code is {int}")
+	public void checkStatusCode(int statusCode) {
+		assertThat(lastStatusCode).isEqualTo(statusCode);
 	}
 
 	private String readBodyFromFile(String fileName) throws URISyntaxException, IOException {
@@ -225,4 +248,24 @@ public class LdesServerSteps extends LdesServerIntegrationTest {
 		});
 
 	}
+
+	@And("The response from requesting the url {string} contains {long} remaining items statements")
+	public void theResponseFromRequestingTheUrlDoesContainRemainingitemsStatement(String url, long statementCount) throws Exception {
+		MockHttpServletResponse response = mockMvc.perform(get(url).accept("text/turtle")
+						.header("Access-Control-Request-Method", "GET")
+						.header("Origin", "http://www.someurl.com"))
+				.andExpect(status().isOk()).andReturn().getResponse();
+		Model contentAsString = RDFParser.create().fromString(response.getContentAsString()).lang(Lang.TTL).toModel();
+        long size = contentAsString.listObjectsOfProperty(createProperty(TREE_REMAINING_ITEMS))
+				.toList().size();
+		assertThat(size).isEqualTo(statementCount);
+	}
+
+	@And("The prometheus value for key {string} is 1")
+	public void theResponseFromRequestingTheUrlDoesContainAJsonFile(String message) throws Exception {
+		MockHttpServletResponse response = mockMvc.perform(get(ACTUATOR_PROMETHEUS).accept("application/openmetrics-text"))
+				.andReturn().getResponse();
+		assertTrue(response.getContentAsString().contains(message + " 1.0"));
+	}
+
 }

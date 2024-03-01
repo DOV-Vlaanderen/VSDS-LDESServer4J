@@ -6,11 +6,12 @@ import be.vlaanderen.informatievlaanderen.ldes.server.domain.exceptions.ShaclVal
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.EventStream;
 import be.vlaanderen.informatievlaanderen.ldes.server.ingest.MemberIngester;
 import be.vlaanderen.informatievlaanderen.ldes.server.ingest.entities.Member;
+import be.vlaanderen.informatievlaanderen.ldes.server.ingest.rest.collection.VersionOfPathCollection;
 import be.vlaanderen.informatievlaanderen.ldes.server.ingest.rest.converters.MemberConverter;
 import be.vlaanderen.informatievlaanderen.ldes.server.ingest.rest.exception.IngestionRestResponseEntityExceptionHandler;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFParserBuilder;
+import org.apache.jena.riot.RDFParser;
+import org.apache.jena.riot.RDFWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,16 +28,16 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -45,8 +46,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest
 @ActiveProfiles("test")
-@ContextConfiguration(classes = { MemberConverter.class, MemberIngestController.class,
-		IngestionRestResponseEntityExceptionHandler.class })
+@ContextConfiguration(classes = {MemberConverter.class, MemberIngestController.class,
+		IngestionRestResponseEntityExceptionHandler.class, RdfModelConverter.class, VersionOfPathCollection.class})
 class MemberIngestControllerTest {
 
 	@Autowired
@@ -61,10 +62,8 @@ class MemberIngestControllerTest {
 	@BeforeEach
 	void setUp() {
 		Stream.of(
-				new EventStream("mobility-hindrances", "timestampPath", "versionOfPath",
-						"https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder"),
-				new EventStream("restaurant", "timestampPath", "versionOfPath",
-						"http://example.com/restaurant#MenuItem"))
+						new EventStream("mobility-hindrances", "timestampPath", "http://purl.org/dc/terms/isVersionOf"),
+						new EventStream("restaurant", "timestampPath", "https://vocabulary.uncefact.org/elementVersionId"))
 				.map(EventStreamCreatedEvent::new)
 				.forEach(eventPublisher::publishEvent);
 	}
@@ -72,61 +71,54 @@ class MemberIngestControllerTest {
 	@ParameterizedTest(name = "Ingest an LDES member in the REST service usingContentType {0}")
 	@ArgumentsSource(ContentTypeRdfFormatLangArgumentsProvider.class)
 	void when_POSTRequestIsPerformed_LDesMemberIsSaved(String contentType, Lang rdfFormat) throws Exception {
-		String ldesMemberString = readLdesMemberDataFromFile("example-ldes-member.nq", rdfFormat);
+		byte[] ldesMemberBytes = readLdesMemberDataFromFile("example-ldes-member.nq", rdfFormat);
 
-		mockMvc.perform(post("/mobility-hindrances").contentType(contentType).content(ldesMemberString))
+		mockMvc.perform(post("/mobility-hindrances").contentType(contentType).content(ldesMemberBytes))
 				.andExpect(status().isOk());
 		verify(memberIngester, times(1)).ingest(any(Member.class));
 	}
 
 	@Test
-	void when_POSTRequestIsPerformedWithoutMemberId_ThrowMalformedMemberException() throws Exception {
-		String ldesMemberString = readLdesMemberDataFromFile("example-ldes-member-without-id.nq", Lang.NQUADS);
+	void when_POSTRequestIsPerformedWithoutMultipleNamedNodes_ThrowException() throws Exception {
+		byte[] ldesMemberBytes = readLdesMemberDataFromFile("example-ldes-member-with-multiple-nodes.nq", Lang.NQUADS);
 
 		mockMvc.perform(post("/mobility-hindrances")
-				.contentType("application/n-quads")
-				.content(ldesMemberString))
+						.contentType("application/n-quads")
+						.content(ldesMemberBytes))
 				.andExpect(status().isBadRequest())
-				.andExpect(content().string(
-						"Member id could not be extracted. MemberType https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder could not be found in listStatements."));
+				.andExpect(content().string(containsString("Member id could not be extracted from model")));
 	}
 
 	@Test
-	void when_POSTRequestIsPerformed_LDesMemberIsSavedWithoutVersionOfAndTimestamp() throws Exception {
-		String ldesMemberString = readLdesMemberDataFromFile("example-ldes-member-without-version-of-timestamp.nq",
+	void when_POSTRequestIsPerformed_LdesMemberIsSavedWithoutTimestamp() throws Exception {
+		byte[] ldesMemberBytes = readLdesMemberDataFromFile("example-ldes-member-without-timestamp.nq",
 				Lang.NQUADS);
 
-		mockMvc.perform(post("/mobility-hindrances").contentType("application/n-quads").content(ldesMemberString))
+		mockMvc.perform(post("/mobility-hindrances").contentType("application/n-quads").content(ldesMemberBytes))
 				.andExpect(status().isOk());
 		verify(memberIngester, times(1)).ingest(any(Member.class));
+	}
+
+	@Test
+	void when_POSTRequestIsPerformed_WithoutVersionOf_ThenTheRequestFails() throws Exception {
+		byte[] ldesMemberBytes = readLdesMemberDataFromFile("example-ldes-member-without-version-of.nq",
+				Lang.NQUADS);
+
+		mockMvc.perform(post("/mobility-hindrances").contentType("application/n-quads").content(ldesMemberBytes))
+				.andExpect(status().isBadRequest())
+				.andExpect(content().string(containsString("Member id could not be extracted from model")));
 	}
 
 	@Test
 	@DisplayName("Requesting using another collection name returns 404")
 	void when_POSTRequestIsPerformedUsingAnotherCollectionName_ResponseIs404()
 			throws Exception {
-		String ldesMemberString = readLdesMemberDataFromFile("example-ldes-member.nq", Lang.NQUADS);
+		byte[] ldesMemberBytes = readLdesMemberDataFromFile("example-ldes-member.nq", Lang.NQUADS);
 
 		mockMvc.perform(post("/another-collection-name")
-				.contentType("application/n-quads")
-				.content(ldesMemberString))
+						.contentType("application/n-quads")
+						.content(ldesMemberBytes))
 				.andExpect(status().isNotFound());
-	}
-
-	@Test
-	@DisplayName("Post request with malformed RDF_SYNTAX_TYPE throws MalformedMemberException")
-	void when_POSTRequestIsPerformedUsingMalformedRDF_SYNTAX_TYPE_ThrowMalformedMemberException() throws Exception {
-		String ldesMemberString = readLdesMemberDataFromFile("example-ldes-member.nq", Lang.NQUADS);
-		String ldesMemberType = "https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder";
-		String ldesMemberStringWrongType = ldesMemberString.replace(ldesMemberType,
-				ldesMemberType.substring(0, ldesMemberType.length() - 1));
-
-		mockMvc.perform(post("/mobility-hindrances")
-				.contentType("application/n-quads")
-				.content(ldesMemberStringWrongType))
-				.andExpect(status().isBadRequest())
-				.andExpect(content().string(
-						"Member id could not be extracted. MemberType https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder could not be found in listStatements."));
 	}
 
 	@Test
@@ -148,29 +140,17 @@ class MemberIngestControllerTest {
 				.andExpect(status().isBadRequest());
 	}
 
-	private String readLdesMemberDataFromFile(String fileName, Lang rdfFormat)
-			throws URISyntaxException, IOException {
-		ClassLoader classLoader = getClass().getClassLoader();
-		File file = new File(Objects.requireNonNull(classLoader.getResource(fileName)).toURI());
-		String content = Files.lines(Paths.get(file.toURI())).collect(Collectors.joining("\n"));
-		return RdfModelConverter.toString(RdfModelConverter.fromString(content,
-				Lang.NQUADS), rdfFormat);
-	}
-
-	private Model readModelFromFile(String fileName, Lang lang) throws URISyntaxException, IOException {
-		ClassLoader classLoader = getClass().getClassLoader();
-		URI uri = Objects.requireNonNull(classLoader.getResource(fileName)).toURI();
-
-		return RDFParserBuilder.create()
-				.fromString(Files.lines(Paths.get(uri)).collect(Collectors.joining())).lang(lang)
-				.toModel();
+	private byte[] readLdesMemberDataFromFile(String fileName, Lang rdfFormat) {
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		RDFWriter.source(RDFParser.source(fileName).lang(Lang.NQUADS).toModel()).lang(rdfFormat).output(outputStream);
+		return outputStream.toByteArray();
 	}
 
 	private String readModelStringFromFile(String fileName) throws URISyntaxException, IOException {
 		ClassLoader classLoader = getClass().getClassLoader();
 		URI uri = Objects.requireNonNull(classLoader.getResource(fileName)).toURI();
 
-		return Files.lines(Paths.get(uri)).collect(Collectors.joining());
+		return Files.readString(Paths.get(uri));
 	}
 
 	static class ContentTypeRdfFormatLangArgumentsProvider implements
@@ -194,7 +174,9 @@ class MemberIngestControllerTest {
 					Arguments.of("text/rdf+n3", Lang.N3),
 					Arguments.of("application/trix", Lang.TRIX),
 					Arguments.of("application/turtle", Lang.TURTLE),
-					Arguments.of("text/trig", Lang.TRIG));
+					Arguments.of("text/trig", Lang.TRIG),
+					Arguments.of("application/rdf+protobuf", Lang.RDFPROTO),
+					Arguments.of("application/rdf+thrift", Lang.RDFTHRIFT));
 		}
 	}
 

@@ -4,6 +4,7 @@ import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.FragmentPair;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.LdesFragmentIdentifier;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.TreeRelation;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.ViewName;
+import be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.exceptions.DuplicateFragmentPairException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ public class Fragment {
 	}
 
 	public Fragment(LdesFragmentIdentifier identifier, Boolean immutable, int nrOfMembersAdded,
-			List<TreeRelation> relations, LocalDateTime deleteTime) {
+	                List<TreeRelation> relations, LocalDateTime deleteTime) {
 		this.identifier = identifier;
 		this.immutable = immutable;
 		this.nrOfMembersAdded = nrOfMembersAdded;
@@ -38,7 +39,7 @@ public class Fragment {
 	}
 
 	public String getFragmentIdString() {
-		return identifier.asString();
+		return identifier.asDecodedFragmentId();
 	}
 
 	public List<FragmentPair> getFragmentPairs() {
@@ -54,10 +55,19 @@ public class Fragment {
 	}
 
 	public Fragment createChild(FragmentPair fragmentPair) {
-		ArrayList<FragmentPair> childFragmentPairs = new ArrayList<>(
-				this.identifier.getFragmentPairs().stream().toList());
+		List<FragmentPair> childFragmentPairs = new ArrayList<>(this.identifier.getFragmentPairs().stream().toList());
+		if (hasChildWithSameFragmentKey(fragmentPair, childFragmentPairs)) {
+			throw new DuplicateFragmentPairException(identifier.asDecodedFragmentId(), fragmentPair.fragmentKey());
+		}
 		childFragmentPairs.add(fragmentPair);
 		return new Fragment(new LdesFragmentIdentifier(getViewName(), childFragmentPairs));
+	}
+
+	private static boolean hasChildWithSameFragmentKey(FragmentPair fragmentPair, List<FragmentPair> childFragmentPairs) {
+		return childFragmentPairs
+				.stream()
+				.map(FragmentPair::fragmentKey)
+				.anyMatch(key -> key.equals(fragmentPair.fragmentKey()));
 	}
 
 	public Optional<String> getValueOfKey(String key) {
@@ -77,7 +87,7 @@ public class Fragment {
 	}
 
 	public String getParentIdAsString() {
-		return identifier.getParentId().map(LdesFragmentIdentifier::asString).orElse(ROOT);
+		return identifier.getParentId().map(LdesFragmentIdentifier::asDecodedFragmentId).orElse(ROOT);
 	}
 
 	public boolean isReadyForDeletion() {
@@ -126,11 +136,25 @@ public class Fragment {
 		return deleteTime;
 	}
 
-	public void removeRelation(TreeRelation treeRelation) {
-		relations.remove(treeRelation);
-	}
-
 	public void removeRelationToIdentifier(LdesFragmentIdentifier fragmentIdentifier) {
 		relations.removeIf(treeRelation -> treeRelation.treeNode().equals(fragmentIdentifier));
+	}
+
+	public boolean isConnectedTo(Fragment otherFragment) {
+		return getRelations()
+				.stream()
+				.anyMatch(treeRelation -> treeRelation.treeNode()
+						.equals(otherFragment.getFragmentId()));
+	}
+
+	@Override
+	public String toString() {
+		return "Fragment{" +
+		       "identifier=" + identifier +
+		       ", immutable=" + immutable +
+		       ", nrOfMembersAdded=" + nrOfMembersAdded +
+		       ", relations=" + relations +
+		       ", deleteTime=" + deleteTime +
+		       '}';
 	}
 }

@@ -2,9 +2,11 @@ package be.vlaanderen.informatievlaanderen.ldes.server.rest.treenode;
 
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.PrefixAdder;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.PrefixAdderImpl;
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.RdfModelConverter;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.events.admin.EventStreamCreatedEvent;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.exceptions.MissingResourceException;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.*;
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.rest.PrefixConstructor;
 import be.vlaanderen.informatievlaanderen.ldes.server.fetching.entities.TreeNode;
 import be.vlaanderen.informatievlaanderen.ldes.server.fetching.services.TreeNodeFetcher;
 import be.vlaanderen.informatievlaanderen.ldes.server.rest.caching.CachingStrategy;
@@ -33,11 +35,11 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.List;
 import java.util.Objects;
@@ -48,6 +50,7 @@ import java.util.stream.Stream;
 
 import static be.vlaanderen.informatievlaanderen.ldes.server.domain.constants.RdfConstants.*;
 import static be.vlaanderen.informatievlaanderen.ldes.server.domain.constants.ServerConfig.HOST_NAME_KEY;
+import static org.apache.jena.riot.WebContent.contentTypeTurtle;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -58,7 +61,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(TreeNodeControllerTest.TreeNodeControllerTestConfiguration.class)
 @ContextConfiguration(classes = {TreeNodeController.class,
 		RestConfig.class, TreeViewWebConfig.class,
-		RestResponseEntityExceptionHandler.class})
+		RestResponseEntityExceptionHandler.class, PrefixConstructor.class,
+		RdfModelConverter.class})
 class TreeNodeControllerTest {
 	private static final String COLLECTION_NAME = "ldes-1";
 	private static final String FRAGMENTATION_VALUE_1 = "2020-12-28T09:36:09.72Z";
@@ -83,28 +87,34 @@ class TreeNodeControllerTest {
 	@ArgumentsSource(MediaTypeRdfFormatsArgumentsProvider.class)
 	void when_GETRequestIsPerformed_ResponseContainsAnLDesFragment(String mediaType, Lang lang, boolean immutable,
 																   String expectedHeaderValue, String expectedEtag) throws Exception {
-		EventStream eventStream = new EventStream(COLLECTION_NAME, null, null, null);
+		EventStream eventStream = new EventStream(COLLECTION_NAME, null, null);
 		eventPublisher.publishEvent(new EventStreamCreatedEvent(eventStream));
 
 		LdesFragmentRequest ldesFragmentRequest = new LdesFragmentRequest(ViewName.fromString(fullViewName),
 				List.of(new FragmentPair(GENERATED_AT_TIME, FRAGMENTATION_VALUE_1)));
 		final String fragmentId = new LdesFragmentIdentifier(ldesFragmentRequest.viewName(),
 				ldesFragmentRequest.fragmentPairs())
-				.asString();
+				.asDecodedFragmentId();
 		TreeNode treeNode = new TreeNode(fragmentId, immutable, false, List.of(),
 				List.of(), COLLECTION_NAME);
 
 		when(treeNodeFetcher.getFragment(ldesFragmentRequest)).thenReturn(treeNode);
 
-		ResultActions resultActions = mockMvc
+		var expectedContentType = switch (mediaType) {
+			case MediaType.ALL_VALUE, "", "text/html" -> contentTypeTurtle;
+			default -> mediaType;
+		};
+
+		MvcResult result = mockMvc
 				.perform(get("/{collectionName}/{viewName}", COLLECTION_NAME, VIEW_NAME)
 						.param("generatedAtTime", FRAGMENTATION_VALUE_1)
 						.accept(mediaType))
 				.andExpect(status().isOk())
 				.andExpect(header().string("Cache-Control", expectedHeaderValue))
-				.andExpect(header().string("Etag", "\"" + expectedEtag + "\""));
+				.andExpect(header().string("Etag", "\"" + expectedEtag + "\""))
+				.andExpect(content().contentType(expectedContentType))
+				.andReturn();
 
-		MvcResult result = resultActions.andReturn();
 		Optional<Integer> maxAge = extractMaxAge(result.getResponse().getHeader("Cache-Control"));
 		Model resultModel = RDFParserBuilder.create().fromString(result.getResponse().getContentAsString()).lang(lang)
 				.toModel();
@@ -138,7 +148,7 @@ class TreeNodeControllerTest {
 				ViewName.fromString(fullViewName), List.of());
 		final String fragmentId = new LdesFragmentIdentifier(ldesFragmentRequest.viewName(),
 				ldesFragmentRequest.fragmentPairs())
-				.asString();
+				.asDecodedFragmentId();
 		TreeNode treeNode = new TreeNode(fragmentId, false, false, List.of(),
 				List.of(), COLLECTION_NAME);
 		when(treeNodeFetcher.getFragment(ldesFragmentRequest)).thenReturn(treeNode);
@@ -199,7 +209,8 @@ class TreeNodeControllerTest {
 		@Bean
 		public TreeNodeConverter ldesFragmentConverter(@Value(HOST_NAME_KEY) String hostName) {
 			PrefixAdder prefixAdder = new PrefixAdderImpl();
-			return new TreeNodeConverterImpl(prefixAdder, hostName);
+			PrefixConstructor prefixConstructor = new PrefixConstructor(hostName, false);
+			return new TreeNodeConverterImpl(prefixAdder, prefixConstructor);
 		}
 
 		@Bean

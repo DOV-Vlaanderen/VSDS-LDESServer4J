@@ -26,6 +26,22 @@
             <artifactId>opentelemetry-exporter-zipkin</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
@@ -47,6 +63,29 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+        </dependency>
+
+
+        <!-- TESTING -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
         </dependency>
     </dependencies>
 
@@ -268,11 +307,11 @@
             </dependencies>
         </profile>
         <profile>
-            <id>fragmentation-substring</id>
+            <id>fragmentation-pagination</id>
             <dependencies>
                 <dependency>
                     <groupId>be.vlaanderen.informatievlaanderen.vsds</groupId>
-                    <artifactId>ldes-fragmentisers-substring</artifactId>
+                    <artifactId>ldes-fragmentisers-pagination</artifactId>
                     <version>${project.version}</version>
                 </dependency>
                 <dependency>
@@ -283,11 +322,11 @@
             </dependencies>
         </profile>
         <profile>
-            <id>fragmentation-pagination</id>
+            <id>fragmentation-reference</id>
             <dependencies>
                 <dependency>
                     <groupId>be.vlaanderen.informatievlaanderen.vsds</groupId>
-                    <artifactId>ldes-fragmentisers-pagination</artifactId>
+                    <artifactId>ldes-fragmentisers-reference</artifactId>
                     <version>${project.version}</version>
                 </dependency>
                 <dependency>
@@ -333,6 +372,16 @@
                 <dependency>
                     <groupId>be.vlaanderen.informatievlaanderen.vsds</groupId>
                     <artifactId>ldes-server-compaction</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>instrumentation</id>
+            <dependencies>
+                <dependency>
+                    <groupId>be.vlaanderen.informatievlaanderen.vsds</groupId>
+                    <artifactId>ldes-server-instrumentation</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>

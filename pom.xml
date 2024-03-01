@@ -30,6 +30,7 @@
         <module>ldes-server-port-fetch-rest</module>
         <module>ldes-server-compaction</module>
         <module>ldes-server-integration-test</module>
+        <module>ldes-server-instrumentation</module>
         <module>ldes-server-acd-security</module>
     </modules>
 
@@ -53,22 +54,25 @@
         <!-- MAVEN -->
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <maven.compiler.release>17</maven.compiler.release>
-        <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
+        <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
         <maven-assembly-plugin.version>3.6.0</maven-assembly-plugin.version>
         <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
-        <maven-surefire-plugin.version>3.2.1</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.0.0-M7</maven-failsafe-plugin.version>
-        <maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
+        <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
         <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
         <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
-        <springdoc-openapi.version>2.2.0</springdoc-openapi.version>
-        <swagger-annotations.version>2.2.15</swagger-annotations.version>
+        <springdoc-openapi.version>2.3.0</springdoc-openapi.version>
+        <swagger-annotations.version>2.2.20</swagger-annotations.version>
+        <pyroscope.version>0.13.0</pyroscope.version>
         <unittestskip>false</unittestskip>
         <integrationtestskip>false</integrationtestskip>
         <skipdeploy>false</skipdeploy>
+        <sis-embedded-db.version>1.4</sis-embedded-db.version>
 
         <!-- VSDS -->
         <project.base.groupId>be.vlaanderen.informatievlaanderen.vsds</project.base.groupId>
@@ -77,27 +81,36 @@
         <spring-boot.version>3.1.5</spring-boot.version>
 
         <!-- SPRING DATA -->
-        <spring-data.version>3.1.3</spring-data.version>
+        <spring-data.version>3.2.2</spring-data.version>
 
         <!-- JSON & RDF -->
-        <apache-jena.version>4.8.0</apache-jena.version>
+        <apache-jena.version>4.10.0</apache-jena.version>
         <json-simple.version>1.1.1</json-simple.version>
+        <google-guava.version>33.0.0-jre</google-guava.version>
 
         <!-- TESTING -->
         <junit.version>4.13.2</junit.version>
-        <junit-platform-suite.version>1.10.0</junit-platform-suite.version>
+        <junit-platform-suite.version>1.10.2</junit-platform-suite.version>
         <junit-jupiter-api.version>5.8.2</junit-jupiter-api.version>
-        <jupiter.version>5.10.0</jupiter.version>
-        <mockito.version>5.7.0</mockito.version>
-        <byte-buddy.version>1.14.9</byte-buddy.version>
-        <de.flapdoodle.embed.mongo.version>4.9.3</de.flapdoodle.embed.mongo.version>
+        <jupiter.version>5.10.2</jupiter.version>
+        <mockito.version>5.10.0</mockito.version>
+        <byte-buddy.version>1.14.11</byte-buddy.version>
+        <de.flapdoodle.embed.mongo.version>4.11.0</de.flapdoodle.embed.mongo.version>
         <wiremock-jre8.version>2.35.1</wiremock-jre8.version>
         <awaitility.version>4.2.0</awaitility.version>
-        <cucumber.version>7.14.0</cucumber.version>
-        <assertj-core.version>3.24.2</assertj-core.version>
+        <cucumber.version>7.15.0</cucumber.version>
+        <assertj-core.version>3.25.3</assertj-core.version>
 
         <!-- VULNERABILITY -->
-        <depencency-check-maven.version>8.3.1</depencency-check-maven.version>
+        <depencency-check-maven.version>9.0.9</depencency-check-maven.version>
+
+        <!-- Monitoring and Logging -->
+        <spring.aop.version>3.2.2</spring.aop.version>
+        <spring-boot.actuator.version>3.2.2</spring-boot.actuator.version>
+        <micrometer-prometheus.version>1.12.3</micrometer-prometheus.version>
+        <micrometer-tracing.version>1.2.3</micrometer-tracing.version>
+        <zipkin-reporter.version>3.2.1</zipkin-reporter.version>
+        <loki.version>1.4.2</loki.version>
 
         <!-- JACOCO -->
         <jacoco.version>0.8.11</jacoco.version>
@@ -111,14 +124,12 @@
         <sonar.projectKey>Informatievlaanderen_VSDS-LDESServer4J-${project.groupId}:${project.artifactId}
         </sonar.projectKey>
 
-        <!--suppress UnresolvedMavenProperty -->
-        <impsort-maven-plugin.version>1.9.0</impsort-maven-plugin.version>
-
         <!-- HASHING -->
-        <commons-codec.version>1.16.0</commons-codec.version>
+        <commons-codec.version>1.16.1</commons-codec.version>
 
         <!-- NULL ANNOTATIONS -->
-        <jetbrains-annotations.version>24.0.1</jetbrains-annotations.version>
+        <jetbrains-annotations.version>24.1.0</jetbrains-annotations.version>
+
 
         <!-- ACD INFRASTRUCTURE PROPERTIES-->
         <acd.issueManagement.url>https://www.milieuinfo.be/jira</acd.issueManagement.url>
@@ -291,6 +302,39 @@
                 <version>${commons-codec.version}</version>
             </dependency>
 
+            <!-- Monitoring and Logging -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-aop</artifactId>
+                <version>${spring.aop.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-actuator</artifactId>
+                <version>${spring-boot.actuator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus</artifactId>
+                <version>${micrometer-prometheus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-tracing-bridge-otel</artifactId>
+                <version>${micrometer-tracing.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.zipkin.reporter2</groupId>
+                <artifactId>zipkin-reporter-brave</artifactId>
+                <version>${zipkin-reporter.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.loki4j</groupId>
+                <artifactId>loki-logback-appender</artifactId>
+                <version>${loki.version}</version>
+            </dependency>
+
+
             <!-- NULL ANNOTATIONS -->
             <dependency>
                 <groupId>org.jetbrains</groupId>
@@ -317,6 +361,14 @@
                 <version>${lombok.version}</version>
                 <scope>provided</scope>
             </dependency>
+
+            <!-- INSTRUMENTATION -->
+            <dependency>
+                <groupId>io.pyroscope</groupId>
+                <artifactId>agent</artifactId>
+                <version>${pyroscope.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -423,26 +475,6 @@
         </pluginManagement>
 
         <plugins>
-
-            <plugin>
-                <groupId>net.revelc.code</groupId>
-                <artifactId>impsort-maven-plugin</artifactId>
-                <version>${impsort-maven-plugin.version}</version>
-                <configuration>
-                    <removeUnused>true</removeUnused>
-                    <groups>*, java.,javax.,com.</groups>
-                    <staticGroups>*</staticGroups>
-                    <staticAfter>true</staticAfter>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>sort-imports</id>
-                        <goals>
-                            <goal>sort</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -7,9 +7,11 @@ import be.vlaanderen.informatievlaanderen.ldes.server.admin.rest.IsIsomorphic;
 import be.vlaanderen.informatievlaanderen.ldes.server.admin.rest.exceptionhandling.AdminRestResponseEntityExceptionHandler;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.HttpModelConverter;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.PrefixAdderImpl;
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.RdfModelConverter;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.exceptions.ExistingResourceException;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.exceptions.MissingResourceException;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.exceptions.ShaclValidationException;
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.rest.PrefixConstructor;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.riot.Lang;
@@ -40,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest
 @ContextConfiguration(classes = { AdminServerDcatController.class, HttpModelConverter.class, PrefixAdderImpl.class,
-		AdminRestResponseEntityExceptionHandler.class })
+		AdminRestResponseEntityExceptionHandler.class, PrefixConstructor.class, RdfModelConverter.class })
 @ExtendWith(MockitoExtension.class)
 class AdminDcatServerControllerTest {
 	private static final String ID = "id";

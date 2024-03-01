@@ -6,11 +6,10 @@ import be.vlaanderen.informatievlaanderen.ldes.server.admin.domain.eventstream.r
 import be.vlaanderen.informatievlaanderen.ldes.server.admin.domain.shacl.repository.ShaclShapeRepository;
 import be.vlaanderen.informatievlaanderen.ldes.server.admin.domain.view.repository.DcatViewRepository;
 import be.vlaanderen.informatievlaanderen.ldes.server.admin.domain.view.repository.ViewRepository;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.rest.controllers.AdminEventStreamsRestController;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.rest.controllers.AdminServerDcatController;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.rest.controllers.DcatDatasetRestController;
-import be.vlaanderen.informatievlaanderen.ldes.server.admin.rest.controllers.DcatViewsRestController;
+import be.vlaanderen.informatievlaanderen.ldes.server.admin.rest.controllers.*;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.PrefixAdderImpl;
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.RdfModelConverter;
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.rest.PrefixConstructor;
 import io.cucumber.spring.CucumberContextConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -28,8 +27,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @CucumberContextConfiguration
 @EnableAutoConfiguration
 @ActiveProfiles("test")
-@ContextConfiguration(classes = { AdminEventStreamsRestController.class, AdminServerDcatController.class,
-		DcatViewsRestController.class, DcatDatasetRestController.class, PrefixAdderImpl.class })
+@ContextConfiguration(classes = { AdminEventStreamsRestController.class, AdminViewsRestController.class, AdminServerDcatController.class,
+		DcatViewsRestController.class, DcatDatasetRestController.class, PrefixAdderImpl.class, PrefixConstructor.class,
+		RdfModelConverter.class})
 @ComponentScan(value = {
 		"be.vlaanderen.informatievlaanderen.ldes.server.admin.spi",
 		"be.vlaanderen.informatievlaanderen.ldes.server.admin.domain.eventstream",

@@ -4,10 +4,15 @@ import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.FragmentPair;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.TreeRelation;
 import be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.entities.Fragment;
 import be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.repository.FragmentRepository;
+import io.micrometer.core.instrument.Metrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static be.vlaanderen.informatievlaanderen.ldes.server.domain.constants.RdfConstants.GENERIC_TREE_RELATION;
+import static be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.FragmentationService.LDES_SERVER_CREATE_FRAGMENTS_COUNT;
+import static be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.metrics.MetricsConstants.FRAGMENTATION_STRATEGY;
+import static be.vlaanderen.informatievlaanderen.ldes.server.fragmentation.metrics.MetricsConstants.VIEW;
+import static be.vlaanderen.informatievlaanderen.ldes.server.fragmentisers.pagination.PaginationStrategy.PAGINATION_FRAGMENTATION;
 import static be.vlaanderen.informatievlaanderen.ldes.server.fragmentisers.pagination.constants.PaginationConstants.FIRST_PAGE_NUMBER;
 import static be.vlaanderen.informatievlaanderen.ldes.server.fragmentisers.pagination.constants.PaginationConstants.PAGE_NUMBER;
 
@@ -36,7 +41,9 @@ public class PageCreator {
 
 	private Fragment createFragment(Fragment parentFragment, String pageNumber) {
 		Fragment newFragment = parentFragment.createChild(new FragmentPair(PAGE_NUMBER, pageNumber));
-		LOGGER.debug("Pagination fragment created with id: {}", newFragment.getFragmentId());
+		String viewName = parentFragment.getViewName().asString();
+		Metrics.counter(LDES_SERVER_CREATE_FRAGMENTS_COUNT, VIEW, viewName, FRAGMENTATION_STRATEGY, PAGINATION_FRAGMENTATION).increment();
+		LOGGER.debug("Page created with id: {}", newFragment.getFragmentId());
 		return newFragment;
 	}
 

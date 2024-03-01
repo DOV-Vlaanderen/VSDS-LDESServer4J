@@ -1,25 +1,35 @@
+version: "3.3"
 services:
   ldes-server:
-    env_file:
-      - ./docker-compose/config.local.env
-    container_name: ldes.server
-    image: ldes/ldes-server:latest
+    container_name: basic_ldes-server
+    image: ldes/ldes-server
+    environment:
+      - SPRING_CONFIG_LOCATION=/config/
+      - PYROSCOPE_CONFIGURATION_FILE=/config/pyroscope.properties
+    volumes:
+      - ./docker-compose/server.config.yml:/config/application.yml:ro
+      - ./docker-compose/pyroscope.properties:/config/pyroscope.properties:ro
     ports:
       - "8080:8080"
-    volumes:
-      - ./content:/opt/content
+      - "8087:8087"
+      - "8088:8088"
+      - "8089:8089"
     networks:
       - ldes
     depends_on:
       - ldes-mongodb
   ldes-mongodb:
+    container_name: ldes-mongodb
     image: mongo
-    container_name: ldes.mongodb
     ports:
-      - "27017:27017"
-    restart: always
+      - 27017:27017
+    networks:
+      - ldes
+  pyroscope:
+    image: grafana/pyroscope:latest
+    ports:
+      - 4040:4040
     networks:
       - ldes
 networks:
   ldes:
-    driver: bridge

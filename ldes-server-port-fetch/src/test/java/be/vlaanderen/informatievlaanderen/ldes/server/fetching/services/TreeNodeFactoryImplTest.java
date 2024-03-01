@@ -49,7 +49,7 @@ class TreeNodeFactoryImplTest {
 
 		assertThatThrownBy(() -> treeNodeFactory.getTreeNode(TREE_NODE_ID, HOSTNAME, COLLECTION_NAME))
 				.isInstanceOf(MissingResourceException.class)
-				.hasMessage("Resource of type: fragment with id: %s/%s/%s could not be found.", HOSTNAME, COLLECTION_NAME, VIEW);
+				.hasMessage("Resource of type: fragment with id: /%s/%s could not be found.", COLLECTION_NAME, VIEW);
 	}
 
 	@Test
@@ -59,7 +59,7 @@ class TreeNodeFactoryImplTest {
 				"valueType", "relation"));
 		when(fragmentRepository.retrieveFragment(TREE_NODE_ID)).thenReturn(Optional.of(fragment));
 		Member member = new Member("member", COLLECTION_NAME, 0L, null);
-		when(allocationRepository.getMemberAllocationsByFragmentId(TREE_NODE_ID.asString()))
+		when(allocationRepository.getMemberAllocationsByFragmentId(TREE_NODE_ID.asDecodedFragmentId()))
 				.thenReturn(List.of(new MemberAllocation("id", "", "", "", "member")));
 		when(memberRepository.findAllByIds(List.of("member"))).thenReturn(List.of(member));
 

@@ -49,7 +49,7 @@ public class EventStreamServiceImpl implements EventStreamService {
 			ShaclShape shaclShape = shaclShapeService.retrieveShaclShape(eventStream.getCollection());
 			Optional<DcatDataset> dataset = dcatDatasetService.retrieveDataset(eventStream.getCollection());
 			return new EventStreamResponse(eventStream.getCollection(), eventStream.getTimestampPath(),
-					eventStream.getVersionOfPath(), eventStream.getMemberType(),
+					eventStream.getVersionOfPath(),
 					views, shaclShape.getModel(), dataset.orElse(null));
 		}).toList();
 	}
@@ -63,7 +63,7 @@ public class EventStreamServiceImpl implements EventStreamService {
 		Optional<DcatDataset> dataset = dcatDatasetService.retrieveDataset(collectionName);
 
 		return new EventStreamResponse(eventStream.getCollection(), eventStream.getTimestampPath(),
-				eventStream.getVersionOfPath(), eventStream.getMemberType(), views,
+				eventStream.getVersionOfPath(), views,
 				shaclShape.getModel(), dataset.orElse(null));
 	}
 
@@ -73,8 +73,7 @@ public class EventStreamServiceImpl implements EventStreamService {
 			throw new MissingResourceException("eventstream", collectionName);
 		}
 
-		eventStreamRepository.deleteEventStream(collectionName);
-		eventPublisher.publishEvent(new EventStreamDeletedEvent(collectionName));
+		delete(collectionName);
 	}
 
 	@Override
@@ -84,11 +83,22 @@ public class EventStreamServiceImpl implements EventStreamService {
 
 		checkCollectionDoesNotYetExist(eventStream.getCollection());
 
-		eventStreamRepository.saveEventStream(eventStream);
-		shaclShapeService.updateShaclShape(shaclShape);
-		eventPublisher.publishEvent(new EventStreamCreatedEvent(eventStream));
-		eventStreamResponse.getViews().forEach(viewService::addView);
+		try {
+			eventStreamRepository.saveEventStream(eventStream);
+			shaclShapeService.updateShaclShape(shaclShape);
+			eventPublisher.publishEvent(new EventStreamCreatedEvent(eventStream));
+			eventStreamResponse.getViews().forEach(viewService::addView);
+		} catch (RuntimeException e) {
+			delete(eventStreamResponse.getCollection());
+			throw e;
+		}
+
 		return eventStreamResponse;
+	}
+
+	private void delete(String collectionName) {
+		eventStreamRepository.deleteEventStream(collectionName);
+		eventPublisher.publishEvent(new EventStreamDeletedEvent(collectionName));
 	}
 
 	private void checkCollectionDoesNotYetExist(String collectionName) {
@@ -102,8 +112,8 @@ public class EventStreamServiceImpl implements EventStreamService {
 		return new EventStream(
 				eventStreamResponse.getCollection(),
 				eventStreamResponse.getTimestampPath(),
-				eventStreamResponse.getVersionOfPath(),
-				eventStreamResponse.getMemberType());
+				eventStreamResponse.getVersionOfPath()
+		);
 	}
 
 	@Override

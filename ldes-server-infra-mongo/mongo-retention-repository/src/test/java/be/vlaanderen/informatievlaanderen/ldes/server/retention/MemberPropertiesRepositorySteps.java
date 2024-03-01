@@ -1,6 +1,10 @@
 package be.vlaanderen.informatievlaanderen.ldes.server.retention;
 
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.ViewName;
 import be.vlaanderen.informatievlaanderen.ldes.server.retention.entities.MemberProperties;
+import be.vlaanderen.informatievlaanderen.ldes.server.retention.services.retentionpolicy.definition.timeandversionbased.TimeAndVersionBasedRetentionPolicy;
+import be.vlaanderen.informatievlaanderen.ldes.server.retention.services.retentionpolicy.definition.timebased.TimeBasedRetentionPolicy;
+import be.vlaanderen.informatievlaanderen.ldes.server.retention.services.retentionpolicy.definition.versionbased.VersionBasedRetentionPolicy;
 import io.cucumber.java.Before;
 import io.cucumber.java.DataTableType;
 import io.cucumber.java.en.And;
@@ -8,10 +12,12 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class MemberPropertiesRepositorySteps extends MongoRetentionIntegrationTest {
@@ -43,17 +49,7 @@ public class MemberPropertiesRepositorySteps extends MongoRetentionIntegrationTe
 
 	@When("I save the MemberProperties using the MemberPropertiesRepository")
 	public void iSaveTheMemberPropertiesUsingTheMemberPropertiesRepository() {
-		memberProperties.forEach(memberPropertiesRepository::save);
-	}
-
-	@When("I save the MemberProperties without view using the MemberPropertiesRepository")
-	public void iSaveTheMemberPropertiesWithoutViewUsingTheMemberPropertiesRepository() {
-		memberProperties.forEach(memberPropertiesRepository::saveMemberPropertiesWithoutViews);
-	}
-
-	@And("I add the view with name {string} to the MemberProperties with id {string}")
-	public void addViewToMember(String viewName, String memberId) {
-		memberPropertiesRepository.addViewReference(memberId, viewName);
+		memberProperties.forEach(memberPropertiesRepository::insert);
 	}
 
 	@And("I retrieve the MemberProperties with id {string}")
@@ -84,8 +80,17 @@ public class MemberPropertiesRepositorySteps extends MongoRetentionIntegrationTe
 				.anyMatch(id -> id.equals(memberProperties.get(index - 1).getId())));
 	}
 
+	@And("The retrieved MemberProperties contains MemberProperties with id {string}")
+	public void theRetrievedMemberPropertiesContainsMemberPropertiesOfTheTable(String expectedId) {
+		assertTrue(retrievedMemberProperties
+				.stream()
+				.map(MemberProperties::getId)
+				.anyMatch(id -> id.equals(expectedId)));
+	}
+
 	@And("I retrieve all MemberProperties with view {string}")
-	public void iRetrieveAllMemberPropertiesWithView(String viewName) {
+	public void iRetrieveAllMemberPropertiesWithView(String viewNameString) {
+		ViewName viewName = ViewName.fromString(viewNameString);
 		retrievedMemberProperties = memberPropertiesRepository.getMemberPropertiesWithViewReference(viewName).toList();
 	}
 
@@ -107,5 +112,59 @@ public class MemberPropertiesRepositorySteps extends MongoRetentionIntegrationTe
 	@And("I delete the MemberProperties with id {string}")
 	public void iDeleteTheMemberPropertiesWithId(String id) {
 		memberPropertiesRepository.deleteById(id);
+	}
+
+	@And("I retrieve the expired MemberProperties for {string} with duration {string}")
+	public void iRetrieveTheExpiredMemberPropertiesForWithDuration(String viewNameString,
+																   String durationString) {
+		Duration duration = Duration.parse(durationString);
+		ViewName viewName = ViewName.fromString(viewNameString);
+		TimeBasedRetentionPolicy timeBasedRetentionPolicy = new TimeBasedRetentionPolicy(duration);
+		retrievedMemberProperties =
+				memberPropertiesRepository.findExpiredMemberProperties(viewName, timeBasedRetentionPolicy).toList();
+	}
+
+	@And("I retrieve the expired MemberProperties for {string} with {int} versions")
+	public void iRetrieveTheExpiredMemberPropertiesForWithVersions(String viewNameString,
+																   int versionsToKeep) {
+		var viewName = ViewName.fromString(viewNameString);
+		var versionBasedRetentionPolicy = new VersionBasedRetentionPolicy(versionsToKeep);
+		retrievedMemberProperties =
+				memberPropertiesRepository.findExpiredMemberProperties(viewName, versionBasedRetentionPolicy).toList();
+	}
+
+	@And("I retrieve the expired MemberProperties for {string} with duration {string} and {int} versions")
+	public void iRetrieveTheExpiredMemberPropertiesForWithDurationAndVersions(String viewNameString,
+																			  String durationString,
+																			  int versionsToKeep) {
+		var duration = Duration.parse(durationString);
+		var viewName = ViewName.fromString(viewNameString);
+		var retentionPolicy = new TimeAndVersionBasedRetentionPolicy(duration, versionsToKeep);
+		retrievedMemberProperties =
+				memberPropertiesRepository.findExpiredMemberProperties(viewName, retentionPolicy).toList();
+	}
+
+	@And("I add the view with name {string} to the MemberProperties with id {string}")
+	public void iAddTheViewWithNameToTheMemberPropertiesWithId(String viewName, String id) {
+		memberProperties
+				.stream()
+				.filter(prop -> id.equals(prop.getId()))
+				.findFirst()
+				.ifPresent(prop -> prop.addViewReference(viewName));
+	}
+
+	@And("I bulk add the view with name {string} to the MemberProperties")
+	public void iBulkAddTheViewWithNameToTheMemberProperties(String viewName) {
+		memberPropertiesRepository.addViewToAll(ViewName.fromString(viewName));
+	}
+
+	@Then("the MemberProperties all contain a reference to view {string}")
+	public void theMemberPropertiesAllContainAReferenceToView(String viewName) {
+		assertThat(retrievedMemberProperties).allMatch(prop -> prop.containsViewReference(viewName));
+	}
+
+	@Then("the MemberProperties do not contain a reference to view {string}")
+	public void theMemberPropertiesDoNotContainAReferenceToView(String viewName) {
+		assertThat(retrievedMemberProperties).noneMatch(prop -> prop.containsViewReference(viewName));
 	}
 }

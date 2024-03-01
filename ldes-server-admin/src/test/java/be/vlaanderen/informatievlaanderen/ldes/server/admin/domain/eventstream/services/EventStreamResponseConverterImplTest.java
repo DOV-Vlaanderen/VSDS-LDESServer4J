@@ -12,6 +12,7 @@ import be.vlaanderen.informatievlaanderen.ldes.server.domain.converter.PrefixAdd
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.FragmentationConfig;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.ViewName;
 import be.vlaanderen.informatievlaanderen.ldes.server.domain.model.ViewSpecification;
+import be.vlaanderen.informatievlaanderen.ldes.server.domain.rest.PrefixConstructor;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.riot.RDFDataMgr;
@@ -36,10 +37,11 @@ class EventStreamResponseConverterImplTest {
 	@BeforeEach
 	void setUp() throws URISyntaxException {
 		String hostName = "http://localhost:8080";
-		ViewSpecificationConverter viewSpecificationConverter = new ViewSpecificationConverter(hostName,
-				new RetentionModelExtractor(), new FragmentationConfigExtractor());
+		PrefixConstructor prefixConstructor = new PrefixConstructor(hostName, false);
+		ViewSpecificationConverter viewSpecificationConverter = new ViewSpecificationConverter(new RetentionModelExtractor(),
+				new FragmentationConfigExtractor(), prefixConstructor);
 		PrefixAdder prefixAdder = new PrefixAdderImpl();
-		eventStreamConverter = new EventStreamResponseConverterImpl(hostName, viewSpecificationConverter, prefixAdder);
+		eventStreamConverter = new EventStreamResponseConverterImpl(viewSpecificationConverter, prefixAdder, prefixConstructor);
 		shacl = readModelFromFile("eventstream/streams/example-shape.ttl");
 		dataSetModel = readModelFromFile("dcat-dataset/valid.ttl");
 	}
@@ -71,7 +73,7 @@ class EventStreamResponseConverterImplTest {
 		void when_modelHasViews_then_convertToEventStreamResponse() {
 			EventStreamResponse expectedEventStreamResponse = new EventStreamResponse("collectionName1",
 					"http://purl.org/dc/terms/created", "http://purl.org/dc/terms/isVersionOf",
-					"https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder", views, shacl);
+					views, shacl);
 
 			EventStreamResponse result = eventStreamConverter.fromModel(eventStreamModel);
 
@@ -82,7 +84,6 @@ class EventStreamResponseConverterImplTest {
 		void when_eventStreamHasViews_then_convertToModel() {
 			final EventStreamResponse eventStream = new EventStreamResponse("collectionName1",
 					"http://purl.org/dc/terms/created", "http://purl.org/dc/terms/isVersionOf",
-					"https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder",
 					views, shacl);
 
 			final Model convertedModel = eventStreamConverter.toModel(eventStream);
@@ -104,7 +105,7 @@ class EventStreamResponseConverterImplTest {
 		void when_modelHasNoViews_then_convertToEventStreamResponse() {
 			EventStreamResponse expectedEventStreamResponse = new EventStreamResponse("collectionName1",
 					"http://purl.org/dc/terms/created", "http://purl.org/dc/terms/isVersionOf",
-					"https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder", List.of(),
+					List.of(),
 					shacl);
 
 			assertEquals(expectedEventStreamResponse, eventStreamConverter.fromModel(eventStreamModel));
@@ -114,7 +115,6 @@ class EventStreamResponseConverterImplTest {
 		void when_eventStreamResponseHasNoViews_then_convertToModel() {
 			final EventStreamResponse eventStream = new EventStreamResponse("collectionName1",
 					"http://purl.org/dc/terms/created", "http://purl.org/dc/terms/isVersionOf",
-					"https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder",
 					List.of(), shacl);
 			final Model convertedModel = eventStreamConverter.toModel(eventStream);
 			assertThat(convertedModel).matches(eventStreamModel::isIsomorphicWith);
@@ -124,7 +124,7 @@ class EventStreamResponseConverterImplTest {
 		void when_eventStreamResponseHasTimestampAndVersionOf_then_convertToModel() {
 			EventStreamResponse eventStream = new EventStreamResponse("collectionName1",
 					null, null,
-					"https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder", List.of(),
+					List.of(),
 					shacl);
 
 			eventStreamModel.remove(eventStreamModel.listStatements(null,
@@ -165,7 +165,7 @@ class EventStreamResponseConverterImplTest {
 		void when_eventStreamHasViewsAndDataset_Then_ConvertToModel() {
 			final EventStreamResponse eventStream = new EventStreamResponse("collectionName1",
 					"http://purl.org/dc/terms/created", "http://purl.org/dc/terms/isVersionOf",
-					"https://data.vlaanderen.be/ns/mobiliteit#Mobiliteitshinder", views, shacl,
+                    views, shacl,
 					new DcatDataset("collectionName1", dataSetModel));
 			final Model convertedModel = eventStreamConverter.toModel(eventStream);
 
