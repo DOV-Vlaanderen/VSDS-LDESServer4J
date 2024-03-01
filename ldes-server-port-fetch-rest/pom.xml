@@ -52,6 +52,12 @@
             <version>${project.version}</version>
             <scope>compile</scope>
         </dependency>
+        <!--fixes module error Module com.google.common not found, required by ldes.admin -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${google-guava.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
