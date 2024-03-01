@@ -65,7 +65,8 @@
         <maven-failsafe-plugin.version>3.0.0-M7</maven-failsafe-plugin.version>
         <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
         <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
-        <maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
+        <!--Disable plugin, build niet op bamboo-->
+        <!--<maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>-->
         <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>
         <springdoc-openapi.version>2.3.0</springdoc-openapi.version>
         <swagger-annotations.version>2.2.20</swagger-annotations.version>
@@ -407,11 +408,11 @@
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
                 </plugin>
-                <plugin>
+                <!--<plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
                     <version>${maven-gpg-plugin.version}</version>
-                </plugin>
+                </plugin>-->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
@@ -539,7 +540,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
+            <!--<plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
                 <executions>
@@ -551,13 +552,13 @@
                         </goals>
                         <configuration>
                             <gpgArguments>
-                                <arg>--pinentry-mode</arg>
+                                <arg>&#45;&#45;pinentry-mode</arg>
                                 <arg>loopback</arg>
                             </gpgArguments>
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin>-->
 
             <!-- RELEASE -->
             <plugin>
